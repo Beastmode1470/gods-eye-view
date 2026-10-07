@@ -63,13 +63,14 @@ export function createHormuzTrafficIllustration(viewer) {
     const heading = document.createElement('strong');
     heading.textContent = 'SIMULATED TRAFFIC FLOW - NOT ACTUAL SHIP TRACKS';
     const summary = document.createElement('div');
-    summary.textContent = observation
+    const summaryText = observation
       ? `${day} | ${observation.source === 'portwatch' ? 'IMF PortWatch' : 'Upstream daily crossings'} | ${
           observation.source === 'portwatch'
             ? `${observation.row.a ?? 'missing'} tankers / ${observation.row.b ?? 'missing'} total ships`
             : `${observation.row.a ?? 'missing'} inbound / ${observation.row.b ?? 'missing'} outbound`
         }`
       : `${day} | No daily traffic observation available. Missing is not zero.`;
+    summary.textContent = summaryText;
     const note = document.createElement('div');
     const portwatch = observation?.source === 'portwatch';
     const firstCount = observation?.row.a;
