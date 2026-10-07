@@ -436,8 +436,12 @@ export function initHormuzHistory(
     illustration.show(day, observation);
     loading = false;
     retimePlayback();
+    const observationLabel =
+      observation?.source === 'portwatch'
+        ? 'IMF PORTWATCH'
+        : 'UPSTREAM DAILY CROSSINGS';
     readout.textContent = observation
-      ? `${day} | ${observation.source === 'portwatch' ? 'IMF PORTWATCH' : 'UPSTREAM DAILY CROSSINGS'} | daily counts illustrated on map; no recorded ship positions.`
+      ? `${day} | ${observationLabel} | daily counts illustrated on map; no recorded ship positions.`
       : `${day} | No recorded positions or published daily counts. Missing observations are not zero traffic.`;
   }
   async function showRecordedIndex(index) {
@@ -498,8 +502,9 @@ export function initHormuzHistory(
         source.value === 'portwatch'
           ? 'IMF PORTWATCH: tankers / total'
           : 'UPSTREAM DAILY CROSSINGS: inbound / outbound';
+      const missingValue = 'missing';
       readout.textContent = row
-        ? `${label} | ${row.date} | ${row.a ?? 'missing'} / ${row.b ?? 'missing'}${row.quality ? ` | quality: ${row.quality}` : ''}. Simulated illustration only; no individual ship paths.`
+        ? `${label} | ${row.date} | ${row.a ?? missingValue} / ${row.b ?? missingValue}${row.quality ? ` | quality: ${row.quality}` : ''}. Simulated illustration only; no individual ship paths.`
         : 'No published daily observation; not zero traffic.';
     }
   }

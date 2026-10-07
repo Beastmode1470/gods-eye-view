@@ -54,6 +54,14 @@ writer. To avoid redundant public-source polling, stop the fork viewer when the
 test is finished and leave the original collector collecting. An existing
 local API is still the preferred read-only connection when one is available.
 
+Before treating the Mac setup as ready, check the import summary and the history
+panel's **actual first/last recorded times**. Seek a frame on an older recorded
+day, play through midnight, seek backward, toggle the vessel layer off/on, and
+return to **Latest ships**. Then check place search, aircraft, satellites and
+public cameras. Provider outages or missing optional keys must show their own
+limitations, not be presented as replay failures. Older daily totals do not
+extend the individual-position coverage.
+
 ## 2. Choose one recording source
 
 ### Hormuz: regional public snapshots, no AISStream key
