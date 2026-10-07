@@ -139,7 +139,7 @@ For an always-on computer, run the headless collector from the fork:
 
 ```text
 npm run collect:ais -- --help
-npm run collect:ais -- --source hormuz --port 8808
+npm run collect:ais -- --source hormuz --port 8908
 ```
 
 For AISStream, use `--source aisstream` and keep your own `AISSTREAM_API_KEY` in
@@ -155,7 +155,7 @@ already-running collector:
 ```dotenv
 HOST=127.0.0.1
 AIS_RECORDING_SOURCE=
-HORMUZ_API_URL=http://127.0.0.1:8808
+HORMUZ_API_URL=http://127.0.0.1:8908
 ```
 
 Use only one writer per database and only one AISStream connection per key.

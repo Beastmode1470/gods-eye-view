@@ -764,7 +764,8 @@ export function createRecordingController({
             collectedAt: payload.collectedAt,
             newestPositionAt: payload.newestPositionAt,
             lastMessageAt: payload.lastMessageAt,
-            truncated: (recent?.totalRows || 0) > Math.min(rows.length, maxRows),
+            truncated:
+              (recent?.totalRows || 0) > Math.min(rows.length, maxRows),
             totalRows: recent?.totalRows || 0,
             returnedRows: Math.min(rows.length, maxRows),
           });
