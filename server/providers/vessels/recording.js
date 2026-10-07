@@ -751,8 +751,11 @@ export function recordedVesselsProxy(options = {}) {
   if (!source) return { name: 'recorded-vessels-proxy-disabled' };
   let controller;
   function install(server) {
-    controller ||=
-      createRecordingController({ ...options, source, stopAisSource: false });
+    controller ||= createRecordingController({
+      ...options,
+      source,
+      stopAisSource: false,
+    });
     server.middlewares.use((req, res, next) =>
       controller.handleRequest(req, res, next),
     );

@@ -274,19 +274,32 @@ function ingestAisRecordingAwareEnvelope(envelope) {
   const messageType = envelope?.MessageType;
   const message = envelope?.Message?.[messageType] || {};
   const metadata = envelope?.MetaData || envelope?.Metadata || {};
-  const rawMmsi = metadata.MMSI ?? message.UserID ?? message.UserId ?? message.Mmsi;
-  const mmsi = rawMmsi === undefined || rawMmsi === null ? '' : String(rawMmsi).trim();
-  const lat = Number(metadata.latitude ?? metadata.Latitude ?? message.Latitude);
-  const lon = Number(metadata.longitude ?? metadata.Longitude ?? message.Longitude);
+  const rawMmsi =
+    metadata.MMSI ?? message.UserID ?? message.UserId ?? message.Mmsi;
+  const mmsi =
+    rawMmsi === undefined || rawMmsi === null ? '' : String(rawMmsi).trim();
+  const lat = Number(
+    metadata.latitude ?? metadata.Latitude ?? message.Latitude,
+  );
+  const lon = Number(
+    metadata.longitude ?? metadata.Longitude ?? message.Longitude,
+  );
   const rawTime = metadata.time_utc ?? metadata.TimeUtc;
-  const text = typeof rawTime === 'string'
-    ? rawTime.trim().replace(' +0000 UTC', 'Z').replace(' UTC', 'Z')
-    : '';
+  const text =
+    typeof rawTime === 'string'
+      ? rawTime.trim().replace(' +0000 UTC', 'Z').replace(' UTC', 'Z')
+      : '';
   const millis = text ? Date.parse(text) : NaN;
   const explicitTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(text);
-  if (/^\d{1,10}$/.test(mmsi) && Number.isFinite(lat) && Math.abs(lat) <= 90
-    && Number.isFinite(lon) && Math.abs(lon) <= 180 && Number.isFinite(millis)
-    && explicitTimezone) {
+  if (
+    /^\d{1,10}$/.test(mmsi) &&
+    Number.isFinite(lat) &&
+    Math.abs(lat) <= 90 &&
+    Number.isFinite(lon) &&
+    Math.abs(lon) <= 180 &&
+    Number.isFinite(millis) &&
+    explicitTimezone
+  ) {
     _aisRecordingObservationTimes.set(mmsi, new Date(millis).toISOString());
   }
   return recognized;
@@ -355,8 +368,10 @@ export function readAisLiveRecordingSnapshot() {
   for (const mmsi of _aisRecordingObservationTimes.keys()) {
     if (!cachedMmsi.has(mmsi)) _aisRecordingObservationTimes.delete(mmsi);
   }
-  const rows = cachedRows.filter((row) =>
-    _aisRecordingObservationTimes.get(String(row.mmsi)) === row.last_position_UTC,
+  const rows = cachedRows.filter(
+    (row) =>
+      _aisRecordingObservationTimes.get(String(row.mmsi)) ===
+      row.last_position_UTC,
   );
   const feed = aisStreamStatusSnapshot();
   return {
