@@ -121,8 +121,27 @@ test('legacy ok=0 without an error message remains a failed poll', (t) => {
   const options = fixture(t);
   const legacy = new DatabaseSync(options.from);
   legacy.exec('ALTER TABLE poll ADD COLUMN ok INTEGER DEFAULT 1; UPDATE poll SET ok=0 WHERE id=2');
+  legacy.exec(`
+    INSERT INTO vessel_position
+    VALUES(2,'123456789','2026-10-02T01:00:00Z',26,56,4,90);
+  `);
   legacy.close();
   const summary = importHormuzArchive(options);
   assert.equal(summary.importedPolls, 1);
   assert.equal(summary.failedPolls, 1);
+  const db = new DatabaseSync(options.db, { readOnly: true });
+  try {
+    const failed = db.prepare(
+      "SELECT poll_id,error FROM polls WHERE status='failed'",
+    ).get();
+    assert.equal(failed.error, 'Legacy collector reported a failed poll');
+    assert.equal(
+      db.prepare('SELECT COUNT(*) AS n FROM positions WHERE poll_id=?')
+        .get(failed.poll_id).n,
+      0,
+      'positions attached to a failed legacy poll must not be imported',
+    );
+  } finally {
+    db.close();
+  }
 });

@@ -259,7 +259,9 @@ function normalizeRows(vessels, poll, source, totalRows = vessels.length) {
         ? 'Hormuz local recorded snapshots'
         : 'AISStream local recorded snapshots',
     recorded: true,
+    recordingSource: source,
     status: 'recorded',
+    error: null,
     snapshotAt: snapshotAt ? Date.parse(snapshotAt) : null,
     collectedAt: validUtc(poll?.fetched_at)
       ? Date.parse(poll.fetched_at)

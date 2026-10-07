@@ -531,14 +531,9 @@ test('recorded routes are bounded, same-site loopback reads and preserve failure
 });
 
 test('recorded vessel and replay responses cap rows consistently with explicit coverage metadata', async () => {
-  const controller = createRecordingController({
-    source: 'hormuz',
-    dbPath: tempDb(),
-    env: { AIS_RECORDING_INTERVAL_SECONDS: '600' },
-    fetchImpl: async () => {
-      throw new Error('fetch is not used by this test');
-    },
-  });
+  const dbPath = tempDb();
+  const store = createRecordingStore({ source: 'hormuz', dbPath });
+  let recorded;
   try {
     const vessels = Array.from({ length: 12_001 }, (_, index) =>
       sample({
@@ -546,12 +541,23 @@ test('recorded vessel and replay responses cap rows consistently with explicit c
         observed_at: '2026-10-07T12:00:00Z',
       }),
     );
-    const recorded = controller.store.recordPoll({
+    recorded = store.recordPoll({
       dataStamp: '2026-10-07T12:00:00Z',
       fetchedAt: '2026-10-07T12:00:01Z',
       vessels,
     });
-
+  } finally {
+    store.close();
+  }
+  const controller = createRecordingController({
+    source: 'hormuz',
+    dbPath,
+    env: { AIS_RECORDING_INTERVAL_SECONDS: '600' },
+    fetchImpl: async () => {
+      throw new Error('fetch is not used by this test');
+    },
+  });
+  try {
     const live = await request(controller, '/api/vessels');
     assert.equal(live.body.rows.length, 12_000);
     assert.equal(live.body.truncated, true);
