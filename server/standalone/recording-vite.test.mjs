@@ -145,6 +145,11 @@ test('AISStream production config does not initialize or create the recording da
           'recorded-vessels-proxy',
           'ais-live-proxy',
         ]);
+        const recorder = config.plugins.find(
+          (plugin) => plugin.name === 'recorded-vessels-proxy',
+        );
+        assert.equal(typeof recorder.configureServer, 'function');
+        assert.equal(typeof recorder.configurePreviewServer, 'function');
         assert.equal(existsSync(dbPath), false);
         assert.equal(existsSync(`${dbPath}.writer.lock`), false);
         assert.equal(

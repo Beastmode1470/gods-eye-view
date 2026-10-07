@@ -4,6 +4,7 @@ import {
   mkdirSync,
   openSync,
   readFileSync,
+  realpathSync,
   unlinkSync,
   writeFileSync,
 } from 'node:fs';
@@ -138,8 +139,14 @@ export function createRecordingStore({ dbPath, source }) {
     throw new Error('dbPath is required');
   if (!['hormuz', 'aisstream'].includes(source))
     throw new Error('Recording source must be hormuz or aisstream');
-  const resolvedDbPath = path.resolve(dbPath);
-  mkdirSync(path.dirname(resolvedDbPath), { recursive: true });
+  const requestedDbPath = path.resolve(dbPath);
+  mkdirSync(path.dirname(requestedDbPath), { recursive: true });
+  const resolvedDbPath = existsSync(requestedDbPath)
+    ? realpathSync(requestedDbPath)
+    : path.join(
+        realpathSync(path.dirname(requestedDbPath)),
+        path.basename(requestedDbPath),
+      );
   if (existsSync(resolvedDbPath)) {
     const existing = new DatabaseSync(resolvedDbPath, { readOnly: true });
     try {
@@ -397,13 +404,24 @@ export function createRecordingStore({ dbPath, source }) {
       )
       .get(pollId);
     if (!poll) return null;
+    const coverage = db
+      .prepare(
+        'SELECT COUNT(*) AS count, MAX(observed_at) AS newest_position_at FROM positions WHERE poll_id=?',
+      )
+      .get(pollId);
+    const totalRows = Number(coverage.count);
     const vessels = db
       .prepare(
         'SELECT payload FROM positions WHERE poll_id=? ORDER BY mmsi LIMIT ?',
       )
       .all(pollId, RECORDING_MAX_ROWS)
       .map((row) => JSON.parse(row.payload));
-    return { poll, vessels };
+    return {
+      poll,
+      vessels,
+      totalRows,
+      newestPositionAt: coverage.newest_position_at,
+    };
   }
 
   function latestSnapshot() {

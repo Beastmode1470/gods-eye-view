@@ -14,7 +14,7 @@ Options:
   --source SOURCE      hormuz or aisstream (defaults to AIS_RECORDING_SOURCE)
   --db PATH            SQLite database path (default: .gev-cache/ais-history.sqlite)
   --interval SECONDS   Poll cadence (Hormuz >=600, AISStream >=10; source defaults apply)
-  --port PORT          Loopback API port (default: 8808)
+  --port PORT          Loopback API port (default: 8908)
   --once               Collect one Hormuz snapshot and exit
   --help               Show this help
 
@@ -51,7 +51,7 @@ function parseArgs(argv, environment) {
     source: environment.AIS_RECORDING_SOURCE || '',
     dbPath: environment.AIS_RECORDING_DB || DEFAULT_DB,
     interval: environment.AIS_RECORDING_INTERVAL_SECONDS || '',
-    port: 8808,
+    port: 8908,
     once: false,
     help: false,
   };

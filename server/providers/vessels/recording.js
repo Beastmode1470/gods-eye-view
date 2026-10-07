@@ -5,7 +5,6 @@ import { admitSameSite } from '../common/same-site.js';
 import {
   createRecordingStore,
   RECORDING_MAX_POLLS,
-  RECORDING_MAX_ROWS,
   validUtc,
 } from './recording-store.js';
 import {
@@ -23,6 +22,7 @@ const DEFAULT_DB = path.resolve(
 const HORMUZ_CENTER = Object.freeze({ lon: 56.4, lat: 26.6, height: 240000 });
 const MAX_UPSTREAM_BYTES = 6 * 1024 * 1024;
 const UPSTREAM_TIMEOUT_MS = 15_000;
+const MAX_API_VESSEL_ROWS = 12_000;
 
 function json(res, status, body) {
   res.statusCode = status;
@@ -226,9 +226,16 @@ function loopbackRequest(req) {
   return ['127.0.0.1', 'localhost', '::1'].includes(hostname);
 }
 
-function normalizeRows(vessels, poll, source) {
+function normalizeRows(vessels, poll, source, totalRows = vessels.length) {
   const dataStamp = poll?.data_stamp || poll?.source_last_poll || null;
   const snapshotAt = validUtc(dataStamp);
+  const positionTimes = vessels
+    .map((vessel) => Date.parse(validUtc(vessel.observed_at) || ''))
+    .filter(Number.isFinite);
+  const newestPositionAt = positionTimes.length
+    ? Math.max(...positionTimes)
+    : null;
+  const lastMessageAt = validUtc(poll?.source_last_poll);
   const rows = vessels.map((vessel) => {
     const observedAt = validUtc(vessel.observed_at);
     return {
@@ -242,6 +249,7 @@ function normalizeRows(vessels, poll, source) {
         source === 'hormuz'
           ? 'Hormuz local recorded snapshots'
           : 'AISStream local recorded snapshots',
+      recordingSource: source,
     };
   });
   return {
@@ -256,9 +264,12 @@ function normalizeRows(vessels, poll, source) {
     collectedAt: validUtc(poll?.fetched_at)
       ? Date.parse(poll.fetched_at)
       : null,
-    newestPositionAt: snapshotAt ? Date.parse(snapshotAt) : null,
-    lastMessageAt: snapshotAt ? Date.parse(snapshotAt) : null,
+    newestPositionAt,
+    lastMessageAt: lastMessageAt ? Date.parse(lastMessageAt) : null,
     refreshing: false,
+    truncated: totalRows > rows.length,
+    totalRows,
+    returnedRows: rows.length,
   };
 }
 
@@ -607,16 +618,44 @@ export function createRecordingController({
           return;
         }
         if (legacyPath === '/api/snapshot') {
+          const vessels = frame.vessels.slice(0, MAX_API_VESSEL_ROWS);
+          const metadata = normalizeRows(
+            vessels,
+            frame.poll,
+            source,
+            frame.totalRows,
+          );
+          metadata.newestPositionAt = frame.newestPositionAt
+            ? Date.parse(frame.newestPositionAt)
+            : null;
           json(res, 200, {
             poll: frame.poll,
-            vessels: frame.vessels.map((row) => ({
+            vessels: vessels.map((row) => ({
               ...row,
               observed_at: row.observed_at,
             })),
             recordingSource: source,
+            truncated: frame.totalRows > vessels.length,
+            totalRows: frame.totalRows,
+            returnedRows: vessels.length,
+            status: metadata.status,
+            error: null,
+            snapshotAt: metadata.snapshotAt,
+            collectedAt: metadata.collectedAt,
+            newestPositionAt: metadata.newestPositionAt,
+            lastMessageAt: metadata.lastMessageAt,
           });
         } else {
-          json(res, 200, normalizeRows(frame.vessels, frame.poll, source));
+          const payload = normalizeRows(
+            frame.vessels.slice(0, MAX_API_VESSEL_ROWS),
+            frame.poll,
+            source,
+            frame.totalRows,
+          );
+          payload.newestPositionAt = frame.newestPositionAt
+            ? Date.parse(frame.newestPositionAt)
+            : null;
+          json(res, 200, payload);
         }
         return;
       }
@@ -686,8 +725,8 @@ export function createRecordingController({
           url.searchParams.get('maxRows'),
           'maxRows',
           1,
-          RECORDING_MAX_ROWS,
-          RECORDING_MAX_ROWS,
+          MAX_API_VESSEL_ROWS,
+          MAX_API_VESSEL_ROWS,
         );
         const recent = store.latestSnapshot();
         const rows = recent?.vessels || [];
@@ -695,16 +734,16 @@ export function createRecordingController({
           rows.slice(0, maxRows),
           recent?.poll || null,
           source,
+          recent?.totalRows || 0,
         );
         payload.health = lastHealth;
         payload.status = lastHealth.status;
         payload.error = lastHealth.error;
-        payload.newestPositionAt = rows.length
-          ? Math.max(
-              ...rows
-                .map((row) => Date.parse(row.observed_at))
-                .filter(Number.isFinite),
-            )
+        payload.newestPositionAt = recent?.newestPositionAt
+          ? Date.parse(recent.newestPositionAt)
+          : null;
+        payload.lastMessageAt = validUtc(recent?.poll?.source_last_poll)
+          ? Date.parse(validUtc(recent.poll.source_last_poll))
           : null;
         const status = ['error', 'degraded'].includes(lastHealth.status)
           ? 503
@@ -719,6 +758,13 @@ export function createRecordingController({
             recordingSource: source,
             status: lastHealth.status,
             error: lastHealth.error,
+            snapshotAt: payload.snapshotAt,
+            collectedAt: payload.collectedAt,
+            newestPositionAt: payload.newestPositionAt,
+            lastMessageAt: payload.lastMessageAt,
+            truncated: (recent?.totalRows || 0) > Math.min(rows.length, maxRows),
+            totalRows: recent?.totalRows || 0,
+            returnedRows: Math.min(rows.length, maxRows),
           });
         } else {
           json(res, status, payload);

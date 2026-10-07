@@ -74,6 +74,11 @@ test('collector CLI validates source-specific polling constraints and never acce
   assert.equal(once.source, 'hormuz');
   assert.equal(once.once, true);
   assert.equal(once.interval, '900');
+  assert.equal(once.port, 8908);
+  assert.equal(
+    parseCollectorArgs(['--source', 'hormuz', '--port', '8910'], {}).port,
+    8910,
+  );
   assert.equal(
     parseCollectorArgs(['--source', 'hormuz'], {
       AIS_RECORDING_INTERVAL_SECONDS: '',
@@ -278,6 +283,46 @@ test('store rolls back an entire frame on a write error and bounds poll manifest
   verifyUnrelated.close();
 });
 
+test('AISStream poll manifests exceed the old 5000-row cap and reject overflow explicitly', () => {
+  const dbPath = tempDb();
+  createRecordingStore({ dbPath, source: 'aisstream' }).close();
+
+  function insertPolls(start, count) {
+    const db = new DatabaseSync(dbPath);
+    const insert = db.prepare(
+      'INSERT INTO polls(data_stamp,fetched_at,status) VALUES(?,? ,?)',
+    );
+    db.exec('BEGIN');
+    try {
+      for (let index = start; index < start + count; index += 1) {
+        const stamp = new Date(
+          Date.parse('2026-10-07T00:00:00.000Z') + index,
+        ).toISOString();
+        insert.run(stamp, stamp, 'success');
+      }
+      db.exec('COMMIT');
+    } catch (error) {
+      db.exec('ROLLBACK');
+      throw error;
+    } finally {
+      db.close();
+    }
+  }
+
+  insertPolls(0, 5_001);
+  const store = createRecordingStore({ dbPath, source: 'aisstream' });
+  assert.equal(store.pollsForDay('2026-10-07').length, 5_001);
+  store.close();
+
+  insertPolls(5_001, 5_000);
+  const fullStore = createRecordingStore({ dbPath, source: 'aisstream' });
+  assert.throws(
+    () => fullStore.pollsForDay('2026-10-07'),
+    /Poll manifest exceeds 10000 rows/,
+  );
+  fullStore.close();
+});
+
 test('Hormuz collector uses fixed non-redirecting source URLs and the ships batch timestamp', async () => {
   const calls = [];
   const fetchImpl = async (url, options) => {
@@ -479,6 +524,88 @@ test('recorded routes are bounded, same-site loopback reads and preserve failure
       (await request(controller, '/api/hormuz/stats')).body.collection
         .failed_polls,
       1,
+    );
+  } finally {
+    await controller.stop();
+  }
+});
+
+test('recorded vessel and replay responses cap rows consistently with explicit coverage metadata', async () => {
+  const controller = createRecordingController({
+    source: 'hormuz',
+    dbPath: tempDb(),
+    env: { AIS_RECORDING_INTERVAL_SECONDS: '600' },
+    fetchImpl: async () => {
+      throw new Error('fetch is not used by this test');
+    },
+  });
+  try {
+    const vessels = Array.from({ length: 12_001 }, (_, index) =>
+      sample({
+        mmsi: String(index + 100_000_000),
+        observed_at: '2026-10-07T12:00:00Z',
+      }),
+    );
+    const recorded = controller.store.recordPoll({
+      dataStamp: '2026-10-07T12:00:00Z',
+      fetchedAt: '2026-10-07T12:00:01Z',
+      vessels,
+    });
+
+    const live = await request(controller, '/api/vessels');
+    assert.equal(live.body.rows.length, 12_000);
+    assert.equal(live.body.truncated, true);
+    assert.equal(live.body.totalRows, 12_001);
+    assert.equal(live.body.returnedRows, 12_000);
+    assert.equal(live.body.recordingSource, 'hormuz');
+    assert.equal(live.body.status, 'recorded');
+    assert.equal(live.body.error, null);
+    assert.equal(
+      live.body.newestPositionAt,
+      Date.parse('2026-10-07T12:00:00Z'),
+    );
+    assert.equal(live.body.lastMessageAt, null);
+
+    const snapshot = await request(
+      controller,
+      `/api/hormuz/snapshot?poll_id=${recorded.poll_id}`,
+    );
+    assert.equal(snapshot.body.rows.length, 12_000);
+    assert.equal(snapshot.body.truncated, true);
+    assert.equal(snapshot.body.totalRows, 12_001);
+    assert.equal(snapshot.body.returnedRows, 12_000);
+    assert.equal(snapshot.body.recordingSource, 'hormuz');
+    assert.equal(snapshot.body.status, 'recorded');
+    assert.equal(snapshot.body.error, null);
+    assert.equal(
+      snapshot.body.newestPositionAt,
+      Date.parse('2026-10-07T12:00:00Z'),
+    );
+
+    const legacySnapshot = await request(
+      controller,
+      `/api/snapshot?poll_id=${recorded.poll_id}`,
+    );
+    assert.equal(legacySnapshot.body.vessels.length, 12_000);
+    assert.equal(legacySnapshot.body.truncated, true);
+    assert.equal(legacySnapshot.body.totalRows, 12_001);
+    assert.equal(legacySnapshot.body.returnedRows, 12_000);
+
+    const legacyLive = await request(controller, '/api/live');
+    assert.equal(legacyLive.body.vessels.length, 12_000);
+    assert.equal(legacyLive.body.truncated, true);
+    assert.equal(legacyLive.body.totalRows, 12_001);
+    assert.equal(legacyLive.body.returnedRows, 12_000);
+    assert.equal(legacyLive.body.recordingSource, 'hormuz');
+    assert.equal(legacyLive.body.status, 'recorded');
+    assert.equal(legacyLive.body.error, null);
+    assert.equal(
+      legacyLive.body.newestPositionAt,
+      Date.parse('2026-10-07T12:00:00Z'),
+    );
+    assert.equal(
+      (await request(controller, '/api/vessels?maxRows=12001')).status,
+      400,
     );
   } finally {
     await controller.stop();
