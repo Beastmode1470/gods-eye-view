@@ -72,8 +72,12 @@ test('CLI requires explicit separate paths, rejects unknown and repeated options
   assert.deepEqual(parseImportArgs(['--from', 'old.sqlite', '--db', 'new.sqlite']), {
     from: 'old.sqlite', db: 'new.sqlite',
   });
+  assert.equal(parseImportArgs(['--help']).help, true);
+  for (const args of [[], ['--from'], ['--unknown'], ['--from', 'a', '--from', 'b']])
+    assert.throws(() => parseImportArgs(args));
+});
 
-  test('stamped failures retain provenance; unstamped failures are explicitly skipped', (t) => {
+test('stamped failures retain provenance; unstamped failures are explicitly skipped', (t) => {
     const options = fixture(t);
     const legacy = new DatabaseSync(options.from);
     legacy.exec(`
@@ -95,7 +99,7 @@ test('CLI requires explicit separate paths, rejects unknown and repeated options
     }
   });
 
-  test('over-limit individual polls fail explicitly without silently truncating', (t) => {
+test('over-limit individual polls fail explicitly without silently truncating', (t) => {
     const options = fixture(t);
     const legacy = new DatabaseSync(options.from);
     legacy.exec(`
@@ -113,7 +117,12 @@ test('CLI requires explicit separate paths, rejects unknown and repeated options
       db.close();
     }
   });
-  assert.equal(parseImportArgs(['--help']).help, true);
-  for (const args of [[], ['--from'], ['--unknown'], ['--from', 'a', '--from', 'b']])
-    assert.throws(() => parseImportArgs(args));
+test('legacy ok=0 without an error message remains a failed poll', (t) => {
+  const options = fixture(t);
+  const legacy = new DatabaseSync(options.from);
+  legacy.exec('ALTER TABLE poll ADD COLUMN ok INTEGER DEFAULT 1; UPDATE poll SET ok=0 WHERE id=2');
+  legacy.close();
+  const summary = importHormuzArchive(options);
+  assert.equal(summary.importedPolls, 1);
+  assert.equal(summary.failedPolls, 1);
 });

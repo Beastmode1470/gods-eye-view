@@ -93,6 +93,14 @@ function parseArgs(argv, environment) {
       '--source hormuz|aisstream is required (or set AIS_RECORDING_SOURCE)',
     );
   }
+  if (
+    options.source === 'aisstream' &&
+    !String(environment.AISSTREAM_API_KEY || '').trim()
+  ) {
+    throw new Error(
+      "--source aisstream requires AISSTREAM_API_KEY in this checkout's .env/.env.local or process environment",
+    );
+  }
   if (options.once && options.source !== 'hormuz') {
     throw new Error('--once is supported only for --source hormuz');
   }

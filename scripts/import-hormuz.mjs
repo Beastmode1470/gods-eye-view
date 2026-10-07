@@ -168,6 +168,12 @@ export function importHormuzArchive({ from, db: output }) {
         if (!Number.isSafeInteger(id) || id < 1)
           throw new Error('Legacy poll identifier is not a positive safe integer');
         let error = poll.error || null;
+        if (pollCols.has('ok')) {
+          if (![0, 1].includes(poll.ok))
+            throw new Error(`Invalid legacy success flag in poll ${id}`);
+          if (poll.ok === 0)
+            error ||= 'Legacy collector reported a failed poll';
+        }
         if (
           pollCols.has('status') &&
           !['success', 'ok', '200', 'failed', 'error'].includes(

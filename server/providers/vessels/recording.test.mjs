@@ -75,9 +75,35 @@ test('collector CLI validates source-specific polling constraints and never acce
   assert.equal(once.once, true);
   assert.equal(once.interval, '900');
   assert.equal(
-    parseCollectorArgs(['--source', 'aisstream', '--interval', '10'], {})
+    parseCollectorArgs(['--source', 'hormuz'], {
+      AIS_RECORDING_INTERVAL_SECONDS: '',
+    }).interval,
+    '900',
+  );
+  assert.equal(
+    parseCollectorArgs(['--source', 'aisstream', '--interval', '10'], {
+      AISSTREAM_API_KEY: 'fixture-key',
+    })
       .interval,
     '10',
+  );
+  assert.equal(
+    parseCollectorArgs(['--source', 'aisstream'], {
+      AISSTREAM_API_KEY: 'fixture-key',
+      AIS_RECORDING_INTERVAL_SECONDS: '',
+    }).interval,
+    '60',
+  );
+  assert.throws(
+    () => parseCollectorArgs(['--source', 'aisstream'], {}),
+    /requires AISSTREAM_API_KEY/,
+  );
+  assert.throws(
+    () =>
+      parseCollectorArgs(['--source', 'aisstream'], {
+        AISSTREAM_API_KEY: '   ',
+      }),
+    /requires AISSTREAM_API_KEY/,
   );
   for (const args of [
     [],
@@ -89,7 +115,10 @@ test('collector CLI validates source-specific polling constraints and never acce
     ['--source', 'hormuz', '--unrecognized'],
   ]) {
     assert.throws(
-      () => parseCollectorArgs(args, {}),
+      () =>
+        parseCollectorArgs(args, {
+          AISSTREAM_API_KEY: 'fixture-key',
+        }),
       undefined,
       args.join(' '),
     );
