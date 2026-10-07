@@ -11,6 +11,7 @@ export function createApplicationControls({
   services,
   catalog,
   placeSearch,
+  startupCamera,
   defer,
 }) {
   // Initialize the style manager (post-processing, HUD, locations, share links)
@@ -41,8 +42,10 @@ export function createApplicationControls({
 
   // If no share link state, do default fly-to Austin
   if (!styleManager.hasShareState) {
-    loaderStatus.textContent = 'Flying to Austin, TX...';
-    defer(flyToAustin(viewer));
+    loaderStatus.textContent = startupCamera
+      ? 'Flying to the recorded source view...'
+      : 'Flying to Austin, TX...';
+    defer(startupCamera ? startupCamera(viewer) : flyToAustin(viewer));
   } else {
     loaderStatus.textContent = 'Restoring shared view...';
   }

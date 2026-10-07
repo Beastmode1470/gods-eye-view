@@ -148,7 +148,11 @@ export function resolveCredential(spec, {
 
 export function buildCapabilitySummary(
   credentials,
-  { openSkyAuthMode = OPENSKY_AUTH_MODE_DEFAULT } = {},
+  {
+    openSkyAuthMode = OPENSKY_AUTH_MODE_DEFAULT,
+    recordingSource = '',
+    externalRecording = false,
+  } = {},
 ) {
   const configured = (name) => credentials[name]?.configured === true;
   const hasOAuthCredentials = configured('OPENSKY_CLIENT_ID') && configured('OPENSKY_CLIENT_SECRET');
@@ -177,7 +181,15 @@ export function buildCapabilitySummary(
         : 'Esri World Imagery (keyless satellite basemap) with keyless terrain',
     flights,
     voice: configured('OPENAI_API_KEY') ? 'available' : 'off until an OpenAI key is added',
-    vessels: configured('AISSTREAM_API_KEY') ? 'live AISStream feed' : 'off until an AISStream key is added',
+    vessels: externalRecording
+      ? 'local recorded collector (availability checked at runtime)'
+      : recordingSource === 'hormuz'
+        ? 'Hormuz snapshots with persistent replay (no AISStream key needed)'
+        : recordingSource === 'aisstream'
+          ? configured('AISSTREAM_API_KEY')
+            ? 'AISStream with persistent local recording and replay'
+            : 'AISStream recording needs your own AISSTREAM_API_KEY'
+          : configured('AISSTREAM_API_KEY') ? 'live AISStream feed' : 'off until an AISStream key is added',
     fires: configured('FIRMS_MAP_KEY') ? 'live NASA FIRMS feed' : 'off until a FIRMS key is added',
     traffic: configured('TOMTOM_API_KEY') ? 'live TomTom flow' : 'built-in traffic simulation',
     missions: configured('LL2_API_TOKEN')
@@ -208,6 +220,10 @@ export function inspectSetup({ includeKeychain = true, authoritativeEnvironment 
     credentials,
     capabilities: buildCapabilitySummary(credentials, {
       openSkyAuthMode: resolveOpenSkyAuthMode({ authoritativeEnvironment, rootDir }),
+      recordingSource: String(process.env.AIS_RECORDING_SOURCE
+        ?? readDoctorDotenvValue('AIS_RECORDING_SOURCE', rootDir)).trim().toLowerCase(),
+      externalRecording: Boolean(String(process.env.HORMUZ_API_URL
+        ?? readDoctorDotenvValue('HORMUZ_API_URL', rootDir)).trim()),
     }),
   };
 }

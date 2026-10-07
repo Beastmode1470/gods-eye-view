@@ -204,7 +204,7 @@ export function createSelection({
       return registerEntityContext(record, {
         id: `ais-${record.mmsi}`,
         layerId: 'ais-live-vessels',
-        layerName: 'Live AIS Vessels',
+        layerName: aisLiveVesselsLayer.name,
         source: aisLiveVesselsLayer.source,
         label: components.cards.displayVesselName(record),
         latitude: record.lat,
@@ -215,6 +215,14 @@ export function createSelection({
           speedKt: record.speed,
           course: record.course,
           destination: record.destination,
+          ...(record.recorded
+            ? {
+                recorded: true,
+                observedAt: record.lastPositionUtc || null,
+                snapshotAt: state.feed.snapshotAt ?? null,
+                ...record.recordedDetails,
+              }
+            : {}),
         },
       });
     } catch (error) {

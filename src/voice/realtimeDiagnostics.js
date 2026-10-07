@@ -1,4 +1,5 @@
 export const ERROR_LOG_LIMIT = 30;
+import { recordingUploadsDisabled } from '../recordingMode.js';
 
 export const ERROR_STORAGE_KEY = 'gev-realtime-errors';
 
@@ -10,6 +11,7 @@ export function createDebugSessionId() {
 }
 
 export function postDebugLog(record) {
+  if (recordingUploadsDisabled()) return;
   try {
     const body = JSON.stringify(record);
     if (navigator.sendBeacon) {
@@ -211,6 +213,7 @@ export class RealtimeDiagnostics {
   }
 
   debugLog(event, payload = {}) {
+    if (recordingUploadsDisabled()) return;
     try {
       this.debugSink?.({
         timestamp: new Date().toISOString(),

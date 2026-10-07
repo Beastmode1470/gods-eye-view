@@ -18,6 +18,29 @@ import {
 
 const credential = (name) => CREDENTIALS.find((spec) => spec.name === name);
 
+test('doctor describes recording without wrongly requiring an AISStream key for Hormuz', () => {
+  assert.match(
+    buildCapabilitySummary({}, { recordingSource: 'hormuz' }).vessels,
+    /Hormuz.*no AISStream key/,
+  );
+  assert.match(
+    buildCapabilitySummary({}, { recordingSource: 'aisstream' }).vessels,
+    /needs your own AISSTREAM_API_KEY/,
+  );
+  assert.match(
+    buildCapabilitySummary(
+      { AISSTREAM_API_KEY: { configured: true } },
+      { recordingSource: 'aisstream' },
+    ).vessels,
+    /persistent local recording and replay/,
+  );
+  assert.match(
+    buildCapabilitySummary({}, { externalRecording: true }).vessels,
+    /local recorded collector/,
+  );
+  assert.equal(buildCapabilitySummary({}).vessels, 'off until an AISStream key is added');
+});
+
 test('doctor distinguishes supported, usable EOL, and unsupported Node versions', () => {
   assert.equal(classifyNodeVersion('24.14.0').level, 'ok');
   assert.equal(classifyNodeVersion('26.1.0').level, 'ok');

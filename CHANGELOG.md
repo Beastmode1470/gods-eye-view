@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+- Add opt-in persistent vessel recording: public Hormuz snapshots or the
+  operator's AISStream feed, stored locally in SQLite. Add a headless collector,
+  day/frame seeking and continuous recorded playback across days, with observed
+  fixes kept distinct from visual interpolation and daily-count illustrations.
+  Preserve the original live-only mode and support an existing loopback collector.
+  See [the setup guide](docs/AIS-RECORDING.md).
+
 - Street Level: a street-level imagery layer modelled on the iD editor's photo
   overlay, with Mapillary as its first provider (free client token, CC BY-SA 4.0
   imagery). One right-rail panel holds a chip per provider, shared 360°/flat and
@@ -1538,4 +1545,3 @@ represent previously published GitHub Releases.
 ## [0.1.0] — 2026-02-09
 
 - Initial project version.
-

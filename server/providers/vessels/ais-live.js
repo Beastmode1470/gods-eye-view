@@ -6,7 +6,7 @@ import { clampInt } from '../common/query.js';
 import {
   AISSTREAM_CACHE_MAX,
   AISSTREAM_STALE_MS,
-  ingestAisStreamEnvelope,
+  ingestAisStreamEnvelope as ingestAisStreamEnvelopeIntoCache,
   readAisTrack,
   aisStreamRows,
   newestAisPositionAt,
@@ -61,6 +61,8 @@ let _aisStreamTickTimer = null;
 let _aisNeedsRearm = false;
 /** @type {Function|null|undefined} `ws` constructor; null = unavailable, undefined = not yet probed. */
 let _aisWebSocketImpl;
+/** @type {Map<string,string>} Last cache row timestamp proven by its raw AIS envelope. */
+const _aisRecordingObservationTimes = new Map();
 
 /**
  * Vite plugin: AISStream live vessel cache.
@@ -259,11 +261,48 @@ function aisAdapter() {
     },
     resolveUrl: () => aisWatchdogPolicy().url,
     buildSubscription: aisStreamSubscription,
-    ingestEnvelope: ingestAisStreamEnvelope,
+    ingestEnvelope: ingestAisRecordingAwareEnvelope,
     warn: (message) => console.warn(message),
   });
   _aisAdapter.setWatchdogOptions(aisWatchdogBudgets());
   return _aisAdapter;
+}
+
+function ingestAisRecordingAwareEnvelope(envelope) {
+  const recognized = ingestAisStreamEnvelopeIntoCache(envelope);
+  if (!recognized) return false;
+  const messageType = envelope?.MessageType;
+  const message = envelope?.Message?.[messageType] || {};
+  const metadata = envelope?.MetaData || envelope?.Metadata || {};
+  const rawMmsi =
+    metadata.MMSI ?? message.UserID ?? message.UserId ?? message.Mmsi;
+  const mmsi =
+    rawMmsi === undefined || rawMmsi === null ? '' : String(rawMmsi).trim();
+  const lat = Number(
+    metadata.latitude ?? metadata.Latitude ?? message.Latitude,
+  );
+  const lon = Number(
+    metadata.longitude ?? metadata.Longitude ?? message.Longitude,
+  );
+  const rawTime = metadata.time_utc ?? metadata.TimeUtc;
+  const text =
+    typeof rawTime === 'string'
+      ? rawTime.trim().replace(' +0000 UTC', 'Z').replace(' UTC', 'Z')
+      : '';
+  const millis = text ? Date.parse(text) : NaN;
+  const explicitTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(text);
+  if (
+    /^\d{1,10}$/.test(mmsi) &&
+    Number.isFinite(lat) &&
+    Math.abs(lat) <= 90 &&
+    Number.isFinite(lon) &&
+    Math.abs(lon) <= 180 &&
+    Number.isFinite(millis) &&
+    explicitTimezone
+  ) {
+    _aisRecordingObservationTimes.set(mmsi, new Date(millis).toISOString());
+  }
+  return recognized;
 }
 
 /** Watchdog budgets derived from the resolved environment policy. */
@@ -308,6 +347,48 @@ function ensureAisStreamConnection() {
     keyFingerprint: aisKeyFingerprint(),
   });
 }
+
+/**
+ * Start the existing AISStream watchdog for a headless recorder. This keeps
+ * collection independent of viewer traffic without opening another socket.
+ */
+export function startAisLiveRecording() {
+  ensureAisStreamConnection();
+  startAisStreamWatchdogTick();
+  return readAisLiveRecordingSnapshot();
+}
+
+/**
+ * Read the same normalized cache and health state served by /api/vessels.
+ * @returns {{rows: object[], source: string, status: string, error: string|null, newestPositionAt: string|null, lastMessageAt: number|null}}
+ */
+export function readAisLiveRecordingSnapshot() {
+  const cachedRows = aisStreamRows(AISSTREAM_CACHE_MAX);
+  const cachedMmsi = new Set(cachedRows.map((row) => String(row.mmsi)));
+  for (const mmsi of _aisRecordingObservationTimes.keys()) {
+    if (!cachedMmsi.has(mmsi)) _aisRecordingObservationTimes.delete(mmsi);
+  }
+  const rows = cachedRows.filter(
+    (row) =>
+      _aisRecordingObservationTimes.get(String(row.mmsi)) ===
+      row.last_position_UTC,
+  );
+  const feed = aisStreamStatusSnapshot();
+  return {
+    rows,
+    source: 'AISStream',
+    status: feed.status,
+    error: feed.error,
+    newestPositionAt: newestAisPositionAt(rows),
+    lastMessageAt: feed.lastMessageAt,
+  };
+}
+
+/** Stop the watchdog and its existing socket for a headless recorder. */
+export function stopAisLiveRecording() {
+  disposeAisStream();
+}
+
 /** Status metadata for /api/vessels, safe to call before the first connect. */
 function aisStreamStatusSnapshot() {
   const snapshot = _aisAdapter ? _aisAdapter.snapshot() : null;

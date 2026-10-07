@@ -111,3 +111,22 @@ test('unkeyed records rebuild on each refresh and numeric coercion keeps unknown
   assert.equal(probe.store.all.length, 1);
   assert.equal(normalizeVessel(row('bad', { lon: Infinity })), null);
 });
+
+test('exact recorded frames evict even the selected vessel immediately without changing live pinning', () => {
+  const probe = setup();
+  probe.reconcile([
+    row('111', { recorded: true }),
+    row('222', { recorded: true }),
+  ]);
+  const selectedRecord = probe.store.byMmsi.get('111');
+  probe.reconcile([row('222', { recorded: true })], {
+    exact: true,
+    selectedRecord,
+  });
+  assert.equal(probe.store.byMmsi.has('111'), false);
+  assert.equal(probe.store.byMmsi.get('222').recorded, true);
+  probe.reconcile([], { exact: true });
+  assert.equal(probe.store.all.length, 0);
+  for (const fields of [{ lat: null }, { lon: '' }, { lat: 91 }, { lon: 181 }])
+    assert.equal(normalizeVessel(row('bad', fields)), null);
+});

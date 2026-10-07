@@ -38,3 +38,74 @@ body.scene-playback-mode
   ) {
   display: none !important;
 }
+
+/* Local recording disclosures and independently owned replay controls. */
+#hormuz-source-status {
+  position: fixed;
+  top: 58px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 150;
+  max-width: min(660px, 90vw);
+  padding: 8px 12px;
+  border: 1px solid #39ffd5;
+  border-radius: 4px;
+  background: rgba(0, 15, 20, 0.92);
+  color: #b9fff0;
+  font: 12px/1.5 monospace;
+  white-space: pre-line;
+  pointer-events: none;
+}
+
+#hormuz-history {
+  position: fixed;
+  bottom: 65px;
+  left: 24px;
+  z-index: 150;
+  width: min(390px, 90vw);
+  max-height: 65vh;
+  overflow-y: auto;
+  background: rgba(0, 15, 20, 0.96);
+  color: #b9fff0;
+  border: 1px solid #39ffd5;
+  border-radius: 4px;
+  font: 11px/1.5 monospace;
+}
+
+#hormuz-history summary {
+  padding: 8px 12px;
+  cursor: pointer;
+}
+#hormuz-history .hormuz-history-body {
+  padding: 0 12px 12px;
+}
+#hormuz-history svg,
+#hormuz-history input[type='range'] {
+  width: 100%;
+}
+#hormuz-history select {
+  max-width: 100%;
+}
+#hormuz-history button {
+  margin: 5px 4px 0 0;
+}
+
+#hormuz-traffic-illustration {
+  position: fixed;
+  top: 170px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 150;
+  width: min(580px, 80vw);
+  padding: 10px 14px;
+  background: rgba(0, 15, 20, 0.94);
+  border: 1px solid #ffbf69;
+  border-radius: 4px;
+  color: #ffbf69;
+  font: 11px/1.5 monospace;
+  pointer-events: none;
+}
+
+#hormuz-traffic-illustration[hidden] {
+  display: none;
+}

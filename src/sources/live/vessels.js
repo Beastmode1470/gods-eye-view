@@ -23,6 +23,19 @@ export function normalizeVesselObservation(row, reference = null) {
       epoch(row.last_position_epoch, 1000) ??
       epoch(Date.parse(row.last_position_UTC)),
     altitudeDatum: 'sea-surface',
+    ...(row.recorded === true
+      ? {
+          recorded: true,
+          recordedDetails: {
+            flag: String(row.flag || ''),
+            zone: String(row.zone || ''),
+            draught: finite(row.draught),
+            dwt: finite(row.dwt),
+            length: finite(row.length),
+            width: finite(row.width),
+          },
+        }
+      : {}),
   };
 }
 
@@ -58,7 +71,12 @@ export function vesselSnapshot(
     records,
     source,
     coverage,
-    complete: records.length === rows.length && !payload?.refreshing,
+    complete:
+      records.length === rows.length &&
+      !payload?.refreshing &&
+      !payload?.truncated,
+    truncated: payload?.truncated === true,
+    totalRows: Math.max(Number(payload?.totalRows) || 0, rows.length),
     rejectedCount: rows.length - records.length,
     observedAtMs,
     freshness: payload?.refreshing
@@ -88,7 +106,7 @@ export function normalizeVesselTrack(samples) {
       {
         latitude,
         longitude,
-        observedAtMs: epoch(sample?.t, 1000),
+        observedAtMs: epoch(sample?.epochSec ?? sample?.t, 1000),
         altitudeDatum: 'sea-surface',
       },
     ];

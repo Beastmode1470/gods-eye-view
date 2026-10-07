@@ -35,24 +35,24 @@ export function createRendering({
     return visualRecords.get(record) || record;
   }
 
-  function prepareRecordVisual(record) {
+  function prepareRecordVisual(record, point = record) {
     let visual = visualRecords.get(record);
     if (!visual) {
       visual = { billboard: record.billboard || null };
       visualRecords.set(record, visual);
     }
     const heightM = components.queries.vesselDatumHeightM(
-      components.tracking.currentGeoidN(record.lat, record.lon),
+      components.tracking.currentGeoidN(point.lat, point.lon),
       VESSEL_LIFT_M,
     );
     visual.position = Cesium.Cartesian3.fromDegrees(
-      record.lon,
-      record.lat,
+      point.lon,
+      point.lat,
       heightM,
     );
     visual.surfacePosition = Cesium.Cartesian3.fromDegrees(
-      record.lon,
-      record.lat,
+      point.lon,
+      point.lat,
       0,
     );
     visual.normal = Cesium.Ellipsoid.WGS84.geodeticSurfaceNormal(
@@ -197,9 +197,10 @@ export function createRendering({
 
   function installRuntime(viewer) {
     if (state.preRenderRemover || !viewer) return;
-    state.preRenderRemover = viewer.scene.preRender.addEventListener(() =>
-      updateVisibility(),
-    );
+    state.preRenderRemover = viewer.scene.preRender.addEventListener(() => {
+      components.recorded?.updateMotion();
+      updateVisibility();
+    });
   }
 
   function updateVisibility(force = false) {

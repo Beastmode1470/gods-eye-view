@@ -122,8 +122,14 @@ export const DATA_CREDITS = [
   {
     key: 'aisstream',
     html:
-      'Live vessels (AIS): ' +
+      'AIS vessel data (live or recorded): ' +
       '<a href="https://aisstream.io" target="_blank" rel="noopener">AISStream.io</a>',
+  },
+  {
+    key: 'hormuz-recorded-ais',
+    html:
+      'Recorded vessel snapshots: ' +
+      '<a href="https://hormuz.data-tracking.net" target="_blank" rel="noopener">hormuz.data-tracking.net</a>',
   },
   {
     key: 'celestrak',

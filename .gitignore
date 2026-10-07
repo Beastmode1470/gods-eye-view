@@ -14,6 +14,14 @@ qa-shots/
 output/
 .gev-logs/
 .gev-cache/
+# Recorded vessel history belongs to the operator, not the source repository.
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.db
+*.db-wal
+*.db-shm
+*.writer.lock
 # Browser QA gate evidence (screenshots, console and network dumps).
 qa-artifacts/
 .DS_Store

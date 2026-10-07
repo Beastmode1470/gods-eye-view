@@ -40,6 +40,12 @@ _“pretty cool”_ — [Brendan Eich](https://x.com/BrendanEich/status/20945920
 
 ## 🌍 Why This Exists
 
+**This fork adds local vessel recording and replay.** Collect Hormuz snapshots
+without an AISStream key, or record the AISStream feed using **your own key**.
+History stays on your computer and survives restarts. Start with the
+[recording setup guide](docs/AIS-RECORDING.md); no existing database, separate
+analytics repository, or cloud account is required.
+
 God's Eye View brings public signals into one explorable globe. Track the world live. Talk to it. Break it. Extend it.
 
 Flight transponders, ship beacons, orbital elements, seismographs, and public cameras already tell us a lot about the world. God's Eye View puts them in the same place, so you can move between a global picture and an individual aircraft, ship, or street. It runs locally in your browser, with source code you can inspect and extend.
@@ -123,7 +129,7 @@ Use **Node.js 24.x (24.14.0 or later) or 26.x**. The setup doctor warns about
 Node 25, which is end-of-life.
 
 ```bash
-git clone https://github.com/bilawalsidhu/gods-eye-view.git
+git clone https://github.com/Beastmode1470/gods-eye-view.git
 cd gods-eye-view
 npm ci
 npm run doctor

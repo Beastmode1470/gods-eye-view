@@ -18,6 +18,17 @@ test('every credit carries a unique key and some markup to render', () => {
   }
 });
 
+test('recorded vessel providers have linked in-app attribution', () => {
+  const aisstream = DATA_CREDITS.find((entry) => entry.key === 'aisstream');
+  const hormuz = DATA_CREDITS.find(
+    (entry) => entry.key === 'hormuz-recorded-ais',
+  );
+  assert.match(aisstream.html, /AIS vessel data \(live or recorded\)/);
+  assert.match(aisstream.html, /href="https:\/\/aisstream\.io"/);
+  assert.match(hormuz.html, /Recorded vessel snapshots/);
+  assert.match(hormuz.html, /href="https:\/\/hormuz\.data-tracking\.net"/);
+});
+
 test('adsbdb is credited and carries its published route-data restriction', () => {
   const credit = DATA_CREDITS.find((entry) => entry.key === 'adsbdb');
   assert.ok(

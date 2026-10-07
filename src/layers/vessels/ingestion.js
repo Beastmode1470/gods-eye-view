@@ -17,9 +17,10 @@ export function createIngestion({
   settleFirstConnect,
   now,
   setSourceLabel,
+  applyRecordedSnapshot,
 }) {
   async function loadLivePositions(viewer) {
-    if (!viewer || feed.loading) return;
+    if (!viewer || feed.loading || feed.historyMode) return;
     feed.loading = true;
     feed.loadingLabel = feed.loaded ? 'refreshing...' : 'loading...';
     const requestController = new AbortController();
@@ -45,6 +46,10 @@ export function createIngestion({
       );
       if (!ownsAisRequest(requestController, requestSessionId)) return;
       setSourceLabel(snapshot.source);
+      if (snapshot.recorded) {
+        applyRecordedSnapshot(viewer, snapshot);
+        return;
+      }
       // Map observations into the existing display store; source fields stop here.
       applyAisFeedSnapshot(viewer, {
         rows: snapshot.records.map(vesselDisplayRow),
@@ -172,6 +177,10 @@ export function createIngestion({
         record.observedAtMs == null
           ? ''
           : new Date(record.observedAtMs).toISOString(),
+      recorded: record.recorded === true,
+      ...(record.recordedDetails
+        ? { recordedDetails: record.recordedDetails }
+        : {}),
     };
   }
   /** Ask again when the view moved away from the last area asked for. */
