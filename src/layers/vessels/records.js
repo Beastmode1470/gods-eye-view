@@ -7,7 +7,17 @@ import {
 export function normalizeVessel(row) {
   const lat = Number(row.lat);
   const lon = Number(row.lon);
-  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+  if (
+    row.lat == null ||
+    row.lon == null ||
+    row.lat === '' ||
+    row.lon === '' ||
+    !Number.isFinite(lat) ||
+    !Number.isFinite(lon) ||
+    Math.abs(lat) > 90 ||
+    Math.abs(lon) > 180
+  )
+    return null;
   return {
     lat,
     lon,
@@ -23,6 +33,10 @@ export function normalizeVessel(row) {
     lastPositionUtc: String(row.last_position_UTC || ''),
     lastPositionEpoch: finiteNumber(row.last_position_epoch),
     missedRefreshes: 0,
+    recorded: row.recorded === true,
+    ...(row.recordedDetails
+      ? { recordedDetails: { ...row.recordedDetails } }
+      : {}),
   };
 }
 
@@ -42,7 +56,7 @@ export class VesselRecords {
   }
   reconcile(
     rows,
-    { complete = true, selectedRecord = null, cap = Infinity },
+    { complete = true, selectedRecord = null, cap = Infinity, exact = false },
     effects,
   ) {
     const receivedAtMs = this.now();
@@ -76,6 +90,8 @@ export class VesselRecords {
         record.heading = next.heading;
         record.lastPositionUtc = next.lastPositionUtc;
         record.lastPositionEpoch = next.lastPositionEpoch;
+        record.recorded = next.recorded;
+        if (next.recordedDetails) record.recordedDetails = next.recordedDetails;
         record.missedRefreshes = 0;
 
         effects.updated(record, before);
@@ -87,6 +103,7 @@ export class VesselRecords {
     for (const [mmsi, record] of this.byMmsi) {
       if (seen.has(mmsi)) continue;
       if (
+        !exact &&
         !complete &&
         Number.isFinite(record.receivedAtMs) &&
         receivedAtMs - record.receivedAtMs < PARTIAL_RETENTION_MS
@@ -99,7 +116,11 @@ export class VesselRecords {
       }
       if (record === selectedRecord) {
         record.missedRefreshes = (record.missedRefreshes || 0) + 1;
-        if (complete && record.missedRefreshes <= SELECTED_PIN_REFRESHES) {
+        if (
+          !exact &&
+          complete &&
+          record.missedRefreshes <= SELECTED_PIN_REFRESHES
+        ) {
           effects.staleSelected(record);
           continue;
         }

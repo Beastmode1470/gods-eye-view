@@ -231,7 +231,11 @@ export function createQueries({
 
     id: 'ais-live-vessels',
 
-    name: 'Live AIS Vessels',
+    name: options.recordingSource
+      ? options.recordingSource === 'aisstream'
+        ? 'AISStream Recording'
+        : 'Hormuz Recorded Vessels'
+      : 'Live AIS Vessels',
 
     icon: '◭',
 
@@ -517,6 +521,15 @@ export function createQueries({
         lastMessageAt: state.feed.lastMessageAt,
         rawRowCount: state.feed.rawRowCount,
         acceptedRowCount: state.feed.acceptedRowCount,
+        ...(options.recordingSource
+          ? {
+              recorded: true,
+              snapshotAt: state.feed.snapshotAt ?? null,
+              recordingSource:
+                state.feed.recordingSource || options.recordingSource,
+              historyMode: Boolean(state.feed.historyMode),
+            }
+          : {}),
         // Same chip affordance the flights layer uses: when the server is
         // backing off, say how long until the next attempt instead of leaving
         // the user to guess whether anything is still happening.

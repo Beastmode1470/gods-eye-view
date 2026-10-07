@@ -11,6 +11,23 @@ How to read this:
 
 ---
 
+## Optional recorded vessel history in this fork
+
+Recording is **opt-in**, fetched at runtime and retained in the operator's local
+database. No AIS archive, account key or third-party historical positions are
+bundled or licensed under this repository's MIT code license.
+
+| Source | Use | Rights and limitations | Attribution |
+| --- | --- | --- | --- |
+| [Hormuz data tracker](https://hormuz.data-tracking.net) | Regional vessel snapshots and separately published daily crossing counts | Review the provider's current terms and obtain permission where required for collection, retention or sharing. Public endpoints and robots rules do not grant redistribution rights. Counts are an incomplete reception index; batches are not a real-time global AIS feed. The collector does not request the provider's animation endpoint. | "Hormuz data tracker - hormuz.data-tracking.net" |
+| [AISStream.io](https://aisstream.io) using the operator's own key | Periodic recorded frames from the existing server-side AISStream feed | Provider coverage, connection limits and current terms apply; public AIS broadcasts do not themselves grant blanket rights to redistribute a provider's service or archive. Recording starts when the operator runs the collector. | "AISStream.io - locally recorded observations" |
+| An existing loopback Hormuz backend | Operator-owned previously recorded fixes and optional historical daily aggregates | The operator remains responsible for the original sources' retention and use terms. Daily PortWatch or crossing totals cannot reconstruct individual ship positions and must not be treated as a single interchangeable population. | Source names supplied by the local backend; keep each original attribution |
+
+Interpolation between recorded fixes is visual only. The optional daily-count
+corridor is explicitly simulated: it does not contain historical vessel
+positions, verified routes or evidence of attack attribution. See
+[recording setup and limits](docs/AIS-RECORDING.md).
+
 ## Live sources (fetched at runtime — not stored in this repo)
 
 | Source                                                                | Used for                                                                                                                            | License / terms                                                                                                                                                                                                                                                                                                                                       | Attribution                                                                                                                                 |

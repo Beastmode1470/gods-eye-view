@@ -1,0 +1,90 @@
+name: AIS recording
+
+on:
+  pull_request:
+  push:
+    branches: [feat/ais-collection-replay]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ais-recording-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  recording:
+    name: Recording persistence and provider fixtures
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: '1'
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Use supported Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24.14.0
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Verify collector help
+        run: |
+          npm run collect:ais -- --help
+          npm run import:hormuz -- --help
+      - name: Verify recording persistence and bounded APIs
+        run: npm run test:recording
+
+  replay-browser:
+    name: Recorded replay browser fixtures
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Use supported Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24.14.0
+          cache: npm
+      - name: Install locked dependencies and Chrome
+        run: npm ci
+      - name: Verify browser replay across recorded and missing days
+        run: |
+          node --test server/standalone/recording-browser.test.mjs
+          npm run qa:recording
+
+  formatting-patch:
+    name: Formatting patch for restricted development machines
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: '1'
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Use supported Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24.14.0
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Produce the repository formatter's patch
+        run: |
+          npm run format
+          git diff --binary > formatting.patch
+      - name: Upload patch without modifying the branch
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ais-formatting-patch
+          path: formatting.patch
+          retention-days: 7

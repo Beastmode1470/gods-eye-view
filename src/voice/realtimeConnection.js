@@ -1,4 +1,5 @@
 const DISCONNECT_GRACE_MS = 6000;
+import { recordingUploadsDisabled } from '../recordingMode.js';
 
 function releaseStartResources({ localStream = null, localPc = null } = {}) {
   if (localStream) {
@@ -50,6 +51,13 @@ export class RealtimeConnection {
     return this.readStatus();
   }
   async start({ pushToTalk = false } = {}) {
+    if (recordingUploadsDisabled()) {
+      this.setStatus(
+        'error',
+        'Voice/AI uploads disabled in local AIS recording mode',
+      );
+      return;
+    }
     if (this.isActive() || this.lifetimeSignal?.aborted) return;
     this.pauseRadioForVoice();
     const pushToTalkKeyHeld = pushToTalk && this.input.pushToTalkKeyHeld;

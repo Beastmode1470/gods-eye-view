@@ -161,12 +161,13 @@ export function createLifecycle({
       components.selection.installInteraction(viewer);
       components.rendering.installRuntime(viewer);
       restoreSpriteOrder(viewer);
+      components.recorded.updateBanner();
     },
 
     enable(viewer) {
       const wasEnabled = state.feed.enabled;
       state.feed.enabled = true;
-      if (!wasEnabled) beginAisSession();
+      if (!wasEnabled && !state.feed.historyMode) beginAisSession();
       holdContinuousRender('ais-vessels'); // per-frame animator (perf wave 2)
       const activeViewer = viewer || state.viewer;
       components.rendering.ensureCollections(activeViewer);
@@ -207,6 +208,7 @@ export function createLifecycle({
     },
 
     disable() {
+      components.recorded.finishRecordedMotion();
       removeViewListener();
       state.feed.enabled = false;
       invalidateAisSession();
@@ -223,9 +225,11 @@ export function createLifecycle({
       }
       state.feed.loading = false;
       state.feed.loadingLabel = '';
+      components.recorded.updateBanner();
     },
 
     destroy(viewer) {
+      components.recorded.destroy();
       removeViewListener();
       const activeViewer = viewer || state.viewer;
       invalidateAisSession();

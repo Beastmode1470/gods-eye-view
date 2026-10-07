@@ -1,5 +1,26 @@
 # God's Eye View Current State
 
+## Persistent vessel recording in this fork - October 7, 2026
+
+`AIS_RECORDING_SOURCE=hormuz` or `aisstream` enables an opt-in local SQLite
+recorder and the recorded-vessel history panel. The original live vessel source
+is unchanged when recording and `HORMUZ_API_URL` are both unset. AISStream uses
+the existing server-side watchdog/normalizer, not a second websocket connection.
+Hormuz polls the public regional snapshot endpoints; it is not AISStream.
+
+`npm run collect:ais` runs the collector without a browser. A viewer can read a
+separate loopback collector through `HORMUZ_API_URL`, including the existing
+Hormuz API. Use only one collector per database/key. Observation timestamps,
+recorded frame manifests and individual vessel fixes survive a restart; daily
+crossings are a separate population and never manufactured vessel tracks.
+
+The recorded viewer supports date/frame seeking and chronological playback
+across days. Missing observations remain gaps. Short-gap display motion is
+visual interpolation, not a new observation. Any legacy daily-count corridor
+is explicitly simulated and cannot establish routes or attribution to attacks.
+Standalone recording does not include an energy-price model or a historical
+PortWatch archive. See [setup, limits and migration](AIS-RECORDING.md).
+
 ## God's Eye View in conversations — October 2, 2026
 
 Tool answers that can be shown in God's Eye View include a view: camera, layers,

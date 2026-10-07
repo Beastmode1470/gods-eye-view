@@ -7,7 +7,11 @@ export function createVesselSnapshotRenderer({
   selection,
   cards,
 }) {
-  function reconcileVessels(viewer, rows, { complete = true } = {}) {
+  function reconcileVessels(
+    viewer,
+    rows,
+    { complete = true, exact = false } = {},
+  ) {
     rendering.ensureCollections(viewer);
     const occluder = rendering.makeOccluder();
     records.reconcile(
@@ -16,6 +20,7 @@ export function createVesselSnapshotRenderer({
         complete,
         selectedRecord: state.selectedRecord,
         cap: rendering.renderRowLimit(),
+        exact,
       },
       {
         add(record) {

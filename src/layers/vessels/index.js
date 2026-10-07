@@ -10,12 +10,14 @@ import { createCards } from './cards.js';
 import { createTesting } from './testing.js';
 import { createEvidence } from './evidence.js';
 import { createQueries } from './queries.js';
+import { createRecordedPlayback } from './recorded.js';
 /** Compose one vessel layer with application-owned scene services. */
 export function createVesselLayer({ source, services, options = {} } = {}) {
   const vesselState = createVesselState({ source, services });
   const parts = {};
   const layer = {};
   const context = { vesselState, services, parts, layer, options };
+  parts.recorded = createRecordedPlayback(context);
   parts.lifecycle = createLifecycle(context);
   parts.rendering = createRendering(context);
   parts.selection = createSelection(context);
@@ -50,12 +52,15 @@ export function createVesselLayer({ source, services, options = {} } = {}) {
     setSourceLabel: (source) => {
       layer.source = source;
     },
+    applyRecordedSnapshot: (viewer, snapshot) =>
+      parts.recorded.applySnapshot(viewer, snapshot, { animate: true }),
   });
   Object.assign(
     layer,
     parts.queries.methods,
     parts.lifecycle.methods,
     parts.ingestion.methods,
+    parts.recorded.methods,
   );
   layer.source = source?.label || 'Vessels';
   Object.assign(layer, {

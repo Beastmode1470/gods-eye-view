@@ -12,6 +12,7 @@ export const VIEWPORT_MAX_PIXELS = 1200 * 900;
 export const VIEWPORT_MAX_ENCODED_BYTES = 200 * 1024;
 
 export async function captureViewportImage() {
+  if (import.meta.env?.HORMUZ_RECORDED_MODE) return null;
   const viewer = window.__godsEyeView?.viewer;
   const source =
     viewer?.scene?.canvas ||

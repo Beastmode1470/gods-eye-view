@@ -2,6 +2,7 @@ import {
   accentForVesselType,
   normalizeVesselType,
 } from '../../data/vesselLabels.js';
+import { HORMUZ_TRAIL_NOTE } from '../../data/hormuzRecorded.js';
 
 export function createCards({
   vesselState,
@@ -23,6 +24,7 @@ export function createCards({
       `AIS: ${trimHudValue(record.name, 32)}`,
       `${trimHudValue(record.type || 'VESSEL', 24)}  SPD: ${formatSpeed(record.speed)}  HDG: ${formatHeading(record.heading ?? record.course)}`,
       `MMSI: ${record.mmsi || '--'}  ${formatPositionTime(record)}${stale ? '  · STALE' : ''}`,
+      ...(record.recorded ? [HORMUZ_TRAIL_NOTE] : []),
     ].join('\n');
   }
 
@@ -96,6 +98,7 @@ export function createCards({
     details.push(
       `MMSI ${record.mmsi || '--'} · ${formatPositionTime(record)}${stale ? ' · STALE' : ''}`,
     );
+    if (record.recorded) details.push(HORMUZ_TRAIL_NOTE);
     return {
       id: vesselOverlayEntryId(record),
       actionable: Boolean(record?.mmsi),
@@ -163,9 +166,10 @@ export function createCards({
   }
 
   function formatPositionTime(record) {
-    if (!record.lastPositionUtc) return 'POS: LIVE';
+    const unknown = record.recorded ? 'POS: UNKNOWN (RECORDED)' : 'POS: LIVE';
+    if (!record.lastPositionUtc) return unknown;
     const date = new Date(record.lastPositionUtc);
-    if (Number.isNaN(date.getTime())) return 'POS: LIVE';
+    if (Number.isNaN(date.getTime())) return unknown;
     return `POS: ${date.toISOString().slice(11, 19)}Z`;
   }
   return {

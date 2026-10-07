@@ -13,16 +13,26 @@ export function createStandaloneCatalog({
     signal,
   }),
 } = {}) {
-  return createApplicationCatalog({
+  let catalog;
+  catalog = createApplicationCatalog({
     nepalBoundaryResolver,
     surface,
-    sources: createStandaloneLayerSources(),
+    sources: createStandaloneLayerSources({
+      vesselBefore: () =>
+        catalog?.layers
+          .find((layer) => layer.id === 'ais-live-vessels')
+          ?.getStats().snapshotAt ?? null,
+    }),
     signal,
     vesselOptions: {
       maxRows: import.meta.env?.VITE_AIS_LIVE_MAX_ROWS,
       maxLabels: import.meta.env?.VITE_AIS_LIVE_LABEL_MAX_ROWS,
+      recordingSource: import.meta.env?.HORMUZ_RECORDED_MODE
+        ? import.meta.env.AIS_RECORDING_SOURCE
+        : null,
     },
   });
+  return catalog;
 }
 
 // Direct compatibility callers share one catalog; application startup supplies its own.

@@ -1,4 +1,5 @@
 import { createOpenFreeMapSource } from '../sources/openFreeMap.js';
+import { createRecordedVesselSource } from '../sources/recordedVessels.js';
 import {
   createFlightSource,
   createMilitarySource,
@@ -22,18 +23,25 @@ import { createReferenceSources } from '../sources/reference.js';
 export { createReferenceSources as createStandaloneReferenceSources } from '../sources/reference.js';
 
 /** Select standalone providers without starting their acquisition. */
-export function createStandaloneLayerSources() {
+export function createStandaloneLayerSources({
+  vesselBefore = () => null,
+} = {}) {
   const mapTiles = createOpenFreeMapSource();
   return {
     ...createReferenceSources(),
     flights: createFlightSource(),
     military: createMilitarySource(),
-    vessels: createVesselSource({
-      apiUrl: import.meta.env?.VITE_AIS_LIVE_API_URL || '/api/vessels',
-      // Resolved against the document's address, which a panel host may
-      // serve from its own scheme.
-      origin: () => globalThis.document?.baseURI ?? 'http://localhost',
-    }),
+    vessels: import.meta.env?.HORMUZ_RECORDED_MODE
+      ? createRecordedVesselSource({
+          source: import.meta.env.AIS_RECORDING_SOURCE,
+          before: vesselBefore,
+        })
+      : createVesselSource({
+          apiUrl: import.meta.env?.VITE_AIS_LIVE_API_URL || '/api/vessels',
+          // Resolved against the document's address, which a panel host may
+          // serve from its own scheme.
+          origin: () => globalThis.document?.baseURI ?? 'http://localhost',
+        }),
     cctv: createCctvSource(),
     radio: createRadioSource(),
     traffic: createTrafficSource({ mapTiles }),
